@@ -1,12 +1,71 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Springforth Result System</title>
-  <link rel="icon" href="%PUBLIC_URL%/favicon.svg" />
-</head>
-<body>
-  <div id="root"></div>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <!-- SEO & App Identity -->
+    <title>IJSR Manuscript to PDF Converter | Scholarly Resources</title>
+    <meta name="description" content="Official tool for converting Word (.docx) manuscripts into professionally formatted IJSR Journal PDFs." />
+    <meta name="author" content="International Journal of Scholarly Resources" />
+
+    <!-- Google Fonts: Inter for UI, Lora for Academic Serif Preview -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Lora:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet" />
+
+    <style>
+      /* Smooth loading and base background */
+      :root {
+        --ijsr-dark: #003366;
+      }
+      body {
+        margin: 0;
+        padding: 0;
+        background-color: #f8fafc;
+        overflow-x: hidden;
+      }
+      #root {
+        min-height: 100vh;
+      }
+      
+      /* Simple preloader styles */
+      #initial-loader {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        width: 100vw;
+        font-family: 'Inter', sans-serif;
+        color: var(--ijsr-dark);
+      }
+      .spinner {
+        width: 40px;
+        height: 40px;
+        border: 3px solid #e2e8f0;
+        border-top: 3px solid var(--ijsr-dark);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-bottom: 1rem;
+      }
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Initial Loader (Removed automatically by React once mounted) -->
+    <div id="root">
+      <div id="initial-loader">
+        <div class="spinner"></div>
+        <p style="font-weight: 500; font-size: 0.9rem;">Initializing IJSR Converter...</p>
+      </div>
+    </div>
+
+    <!-- Main Entry Point -->
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
 </html>
