@@ -4,493 +4,378 @@ import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 
 /**
- * IJSR WORD TO PDF CONVERTER
- * A single-file production-ready React application.
+ * IJSR MANUSCRIPT CONVERTER - VERSION 2.0 (High-Fidelity Template)
+ * Matches the International Journal of Scholarly Resources Visual Format
  */
 
-// --- Configuration & Constants ---
 const pdfConfig = {
   format: 'a4',
-  orientation: 'portrait',
   unit: 'mm',
-  margins: { top: 35, bottom: 25, left: 20, right: 20 },
-  columns: 2,
-  columnGap: 10,
-};
-
-const colors = {
-  headerBlue: [0, 51, 102],      
-  textBlue: [0, 51, 102],        
-  accentBlue: [230, 240, 255],   
-  borderBlue: [102, 153, 204],
-  footerGray: [128, 128, 128],   
-  rowLight: [245, 248, 255]      
-};
-
-const styles = {
-  container: {
-    maxWidth: '1000px',
-    margin: '0 auto',
-    padding: '40px 20px',
-    fontFamily: '"Segoe UI", Roboto, Helvetica, Arial, sans-serif',
-    color: '#333',
-    backgroundColor: '#f4f7f9',
-    minHeight: '100vh',
-  },
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: '12px',
-    boxShadow: '0 8px 30px rgba(0,0,0,0.08)',
-    padding: '30px',
-    marginBottom: '20px',
-  },
-  header: {
-    textAlign: 'center',
-    marginBottom: '40px',
-    background: 'linear-gradient(135deg, #003366 0%, #00509e 100%)',
-    padding: '40px',
-    borderRadius: '12px',
-    color: 'white',
-  },
-  uploadZone: {
-    border: '2px dashed #00509e',
-    borderRadius: '10px',
-    padding: '40px',
-    textAlign: 'center',
-    cursor: 'pointer',
-    backgroundColor: '#f8fbff',
-    transition: 'all 0.2s ease',
-  },
-  button: {
-    padding: '12px 24px',
-    borderRadius: '6px',
-    border: 'none',
-    fontWeight: '600',
-    cursor: 'pointer',
-    transition: 'all 0.2s',
-    fontSize: '15px',
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: '8px',
-  },
-  primaryBtn: { backgroundColor: '#003366', color: 'white' },
-  secondaryBtn: { backgroundColor: '#e0e0e0', color: '#333' },
-  grid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginTop: '20px' },
-  inputGroup: { marginBottom: '15px' },
-  label: { display: 'block', marginBottom: '5px', fontWeight: '600', fontSize: '14px' },
-  input: { width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #ccc' },
-  badge: {
-    padding: '4px 8px',
-    borderRadius: '4px',
-    fontSize: '12px',
-    backgroundColor: '#e3f2fd',
-    color: '#00509e',
-    fontWeight: 'bold',
+  margins: { top: 35, bottom: 20, left: 18, right: 18 },
+  colGap: 8,
+  colors: {
+    mainBlue: [0, 51, 102],
+    lightBlueBg: [240, 245, 255],
+    borderGray: [180, 180, 180],
+    textGray: [80, 80, 80]
   }
 };
 
 export default function App() {
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [parsedData, setParsedData] = useState(null);
+  const [data, setData] = useState(null);
   const [progress, setProgress] = useState(0);
-  const [error, setError] = useState(null);
   
-  // Custom metadata states
-  const [metadata, setMetadata] = useState({
-    receivedDate: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }),
-    acceptedDate: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }),
-    publishedDate: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }),
-    issn: '2833-2172',
-    volume: '5',
-    issue: '2',
-    useTwoColumn: true
+  // Metadata for the "How to Cite" and "Received" boxes
+  const [meta, setMeta] = useState({
+    received: "26th Dec 2025",
+    accepted: "27th Dec 2025",
+    published: "30th Dec 2025",
+    volume: "1",
+    issue: "1",
+    issn: "1234-5678",
+    year: "2025"
   });
 
   const fileInputRef = useRef();
 
-  // --- Core Functions ---
-
-  const handleFileChange = async (e) => {
-    const selectedFile = e.target.files[0];
-    if (!selectedFile) return;
-    if (!selectedFile.name.endsWith('.docx')) {
-      setError("Please upload a valid .docx file.");
-      return;
-    }
-    
-    setFile(selectedFile);
-    setError(null);
-    await processWordFile(selectedFile);
-  };
-
-  const processWordFile = async (file) => {
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setFile(file);
     setLoading(true);
-    setProgress(10);
+    setProgress(20);
+
     try {
       const arrayBuffer = await file.arrayBuffer();
       
-      // 1. Extract raw text for metadata logic
+      // Extract Text for structure
       const textResult = await mammoth.extractRawText({ arrayBuffer });
-      const lines = textResult.value.split('\n').filter(l => l.trim() !== '');
+      const lines = textResult.value.split('\n').filter(l => l.trim().length > 0);
       
-      // 2. Extract HTML for table parsing
+      // Extract HTML for tables
       const htmlResult = await mammoth.convertToHtml({ arrayBuffer });
-      const tempDiv = document.createElement('div');
-      tempDiv.innerHTML = htmlResult.value;
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(htmlResult.value, 'text/html');
 
-      setProgress(40);
+      setProgress(60);
 
-      // --- Parsing Logic ---
-      const data = {
+      // Advanced Parsing Logic
+      const parsed = {
         title: lines[0] || "Untitled Manuscript",
         authors: lines[1] || "Author names not found",
-        affiliations: lines.slice(2, 5).filter(l => l.length > 10 && !l.toLowerCase().includes('abstract')),
+        affiliations: lines.slice(2, 5),
         abstract: "",
         keywords: "",
         sections: [],
-        tables: [],
-        references: []
+        tables: []
       };
 
       // Extract Abstract & Keywords
       const fullText = textResult.value;
-      const abstractMatch = fullText.match(/Abstract:?([\s\S]*?)(Keywords:?|1\.|Introduction)/i);
-      if (abstractMatch) data.abstract = abstractMatch[1].trim();
+      const absMatch = fullText.match(/Abstract([\s\S]*?)(Keywords|1\.|Introduction)/i);
+      if (absMatch) parsed.abstract = absMatch[1].trim();
+      
+      const keyMatch = fullText.match(/Keywords:?([\s\S]*?)(1\.|Introduction)/i);
+      if (keyMatch) parsed.keywords = keyMatch[1].trim();
 
-      const keywordMatch = fullText.match(/Keywords:?([\s\S]*?)(1\.|Introduction|Methodology)/i);
-      if (keywordMatch) data.keywords = keywordMatch[1].trim();
+      // Extract Sections
+      let currentSection = null;
+      lines.forEach(line => {
+        const isHeader = /^(Introduction|Methodology|Literature Review|Result|Discussion|Conclusion|References)/i.test(line.trim());
+        if (isHeader) {
+          if (currentSection) parsed.sections.push(currentSection);
+          currentSection = { title: line.trim(), content: "" };
+        } else if (currentSection) {
+          currentSection.content += line + " ";
+        }
+      });
+      if (currentSection) parsed.sections.push(currentSection);
 
       // Extract Tables
-      const htmlTables = tempDiv.querySelectorAll('table');
-      htmlTables.forEach((table, index) => {
-        const rows = Array.from(table.querySelectorAll('tr')).map(tr => 
+      const tables = doc.querySelectorAll('table');
+      tables.forEach((t, i) => {
+        const rows = Array.from(t.querySelectorAll('tr')).map(tr => 
           Array.from(tr.querySelectorAll('td, th')).map(td => td.innerText.trim())
         );
-        if (rows.length > 0) {
-          data.tables.push({
-            caption: `Table ${index + 1}: Data visualization from manuscript`,
-            head: [rows[0]],
-            body: rows.slice(1)
-          });
-        }
+        parsed.tables.push({ head: [rows[0]], body: rows.slice(1) });
       });
 
-      // Extract Sections (Simplified logic: looking for common heading keywords)
-      const sectionKeywords = ["Introduction", "Methodology", "Results", "Discussion", "Conclusion", "References"];
-      let currentSection = null;
-
-      lines.forEach(line => {
-        const isHeading = sectionKeywords.some(k => line.toUpperCase().startsWith(k.toUpperCase())) && line.length < 50;
-        if (isHeading) {
-          if (currentSection) data.sections.push(currentSection);
-          currentSection = { title: line, content: "" };
-        } else if (currentSection) {
-          currentSection.content += line + "\n\n";
-        }
-      });
-      if (currentSection) data.sections.push(currentSection);
-
+      setData(parsed);
       setProgress(100);
-      setParsedData(data);
     } catch (err) {
-      setError("Failed to parse Word document: " + err.message);
+      alert("Error parsing Word file: " + err.message);
     } finally {
       setLoading(false);
     }
   };
 
   const generatePDF = () => {
-    if (!parsedData) return;
-    
-    const doc = new jsPDF(pdfConfig);
+    const doc = new jsPDF('p', 'mm', 'a4');
+    const { margins, colGap, colors } = pdfConfig;
     const pageWidth = doc.internal.pageSize.getWidth();
-    const margin = pdfConfig.margins;
-    const colWidth = (pageWidth - margin.left - margin.right - pdfConfig.columnGap) / 2;
+    const colWidth = (pageWidth - (margins.left + margins.right) - colGap) / 2;
 
-    const addHeader = (data) => {
-      // Top bar
-      doc.setDrawColor(...colors.headerBlue);
-      doc.setLineWidth(0.5);
-      doc.line(margin.left, 15, pageWidth - margin.right, 15);
+    const drawHeader = (pageNo) => {
+      // Lines
+      doc.setDrawColor(...colors.mainBlue);
+      doc.setLineWidth(0.3);
+      doc.line(margins.left, 15, pageWidth - margins.right, 15);
+      doc.line(margins.left, 28, pageWidth - margins.right, 28);
 
-      // Journal Title
+      // Left Header Text
       doc.setFont("times", "bold");
-      doc.setFontSize(14);
-      doc.setTextColor(...colors.headerBlue);
-      doc.text("International Journal of Scholarly Resources", margin.left, 22);
+      doc.setFontSize(16);
+      doc.setTextColor(...colors.mainBlue);
+      doc.text("International Journal of Scholarly Resources", margins.left, 21);
       
       doc.setFont("times", "italic");
       doc.setFontSize(9);
-      doc.text("Business & Management Studies — A Peer-Reviewed Academic Publication", margin.left, 27);
+      doc.text("Business & Management Studies — A Peer-Reviewed Academic Publication", margins.left, 25);
 
-      // Contact info right aligned
+      // Right Header Text
       doc.setFont("helvetica", "normal");
       doc.setFontSize(8);
-      doc.setTextColor(100);
-      doc.text(`Email: editor@ijsr.org.ng`, pageWidth - margin.right, 22, { align: 'right' });
-      doc.text(`Website: www.ijsr.org.ng`, pageWidth - margin.right, 26, { align: 'right' });
-      
-      doc.line(margin.left, 30, pageWidth - margin.right, 30);
+      doc.setTextColor(50, 50, 50);
+      doc.text("Email: editor@ijsr.org.ng", pageWidth - margins.right, 21, { align: 'right' });
+      doc.text("Website: www.ijsr.org.ng", pageWidth - margins.right, 25, { align: 'right' });
     };
 
-    const addFooter = (pageNum, totalPages) => {
-      const y = doc.internal.pageSize.getHeight() - 15;
+    const drawFooter = (pageNo, total) => {
+      const y = doc.internal.pageSize.getHeight() - 10;
       doc.setDrawColor(200);
-      doc.line(margin.left, y - 5, pageWidth - margin.right, y - 5);
+      doc.line(margins.left, y - 4, pageWidth - margins.right, y - 4);
+      doc.setFont("times", "normal");
       doc.setFontSize(8);
-      doc.setTextColor(...colors.footerGray);
-      doc.text(`International Journal of Scholarly Resources | ISSN: ${metadata.issn} | Volume ${metadata.volume} | Issue ${metadata.issue}`, pageWidth/2, y, { align: 'center' });
-      doc.text(`Page ${pageNum} of ${totalPages}`, pageWidth - margin.right, y, { align: 'right' });
+      doc.setTextColor(120);
+      const footerText = `International Journal of Scholarly Resources | ISSN: ${meta.issn} | Page ${pageNo} of ${total}`;
+      doc.text(footerText, pageWidth / 2, y, { align: 'center' });
     };
 
-    // --- Start Page 1 ---
-    addHeader();
+    // --- PAGE 1 CONTENT ---
+    drawHeader(1);
     let currY = 45;
 
     // Title
     doc.setFont("times", "bold");
-    doc.setFontSize(18);
-    doc.setTextColor(...colors.textBlue);
-    const splitTitle = doc.splitTextToSize(parsedData.title.toUpperCase(), pageWidth - margin.left - margin.right);
-    doc.text(splitTitle, pageWidth/2, currY, { align: 'center' });
-    currY += (splitTitle.length * 8) + 5;
+    doc.setFontSize(20);
+    doc.setTextColor(...colors.mainBlue);
+    const titleLines = doc.splitTextToSize(data.title.toUpperCase(), pageWidth - 40);
+    doc.text(titleLines, pageWidth / 2, currY, { align: 'center' });
+    currY += (titleLines.length * 8) + 5;
 
-    // Authors
+    // Author Box
+    doc.setDrawColor(...colors.mainBlue);
+    doc.setFillColor(255, 255, 255);
+    doc.rect(margins.left, currY, pageWidth - (margins.left * 2), 35);
+    
     doc.setFontSize(11);
-    doc.setFont("times", "normal");
-    doc.text(parsedData.authors, pageWidth/2, currY, { align: 'center' });
-    currY += 10;
-
-    // Dates Box
-    doc.setFillColor(...colors.accentBlue);
-    doc.rect(margin.left, currY, pageWidth - margin.left - margin.right, 10, 'F');
-    doc.setFontSize(8);
-    doc.setTextColor(50);
-    const dateText = `Received: ${metadata.receivedDate} | Accepted: ${metadata.acceptedDate} | Published: ${metadata.publishedDate}`;
-    doc.text(dateText, pageWidth/2, currY + 6.5, { align: 'center' });
-    currY += 20;
-
-    // Abstract Box
-    doc.setDrawColor(...colors.borderBlue);
-    doc.setFillColor(252, 252, 255);
-    const absLines = doc.splitTextToSize(`ABSTRACT: ${parsedData.abstract}`, pageWidth - margin.left - margin.right - 10);
-    const absHeight = (absLines.length * 5) + 15;
-    doc.rect(margin.left, currY, pageWidth - margin.left - margin.right, absHeight, 'DF');
+    doc.text(data.authors, margins.left + 5, currY + 7);
     
     doc.setFont("times", "normal");
-    doc.setFontSize(10);
+    doc.setFontSize(9);
+    const affilLines = doc.splitTextToSize(data.affiliations.join('\n'), pageWidth - 50);
+    doc.text(affilLines, margins.left + 5, currY + 13);
+    currY += 40;
+
+    // Metadata Box (Received/Accepted/Cite)
+    doc.setFillColor(...colors.lightBlueBg);
+    doc.rect(margins.left, currY, pageWidth - (margins.left * 2), 15, 'F');
+    doc.setFontSize(8);
+    doc.text(`Received: [${meta.received}]    |    Accepted: [${meta.accepted}]`, pageWidth - margins.right - 5, currY + 5, { align: 'right' });
+    doc.setFont("times", "bold");
+    doc.text(`How to cite: `, margins.left + 5, currY + 11);
+    doc.setFont("times", "normal");
+    const citeText = `${data.authors.split(',')[0]} (${meta.year}). ${data.title}. International Journal of Scholarly Resources, ISSN: ${meta.issn}.`;
+    doc.text(doc.splitTextToSize(citeText, pageWidth - 50), margins.left + 22, currY + 11);
+    currY += 25;
+
+    // --- TWO COLUMN SECTION ---
+    const startY = currY;
+    let col = 0; // 0 = left, 1 = right
+    let y = startY;
+
+    // Helper to add drop cap
+    const addDropCap = (char, x, yStart) => {
+      doc.setFont("times", "bold");
+      doc.setFontSize(30);
+      doc.setTextColor(...colors.mainBlue);
+      doc.text(char, x, yStart + 6);
+      return 10; // offset for next text
+    };
+
+    // Abstract (Left Column Boxed)
+    doc.setDrawColor(...colors.mainBlue);
+    doc.setFillColor(252, 252, 255);
+    doc.rect(margins.left, y - 5, colWidth, 120, 'D');
+    
+    doc.setFont("times", "bold");
+    doc.setFontSize(12);
+    doc.text("Abstract", margins.left + (colWidth/2), y, { align: 'center' });
+    y += 8;
+
+    const firstLetter = data.abstract.charAt(0);
+    const remainingAbs = data.abstract.slice(1);
+    addDropCap(firstLetter, margins.left + 2, y);
+    
+    doc.setFont("times", "normal");
+    doc.setFontSize(9);
     doc.setTextColor(0);
-    doc.text(absLines, margin.left + 5, currY + 8);
+    const absLines = doc.splitTextToSize(remainingAbs, colWidth - 12);
+    doc.text(absLines, margins.left + 11, y + 2);
     
     // Keywords
+    const keyY = y + 105;
     doc.setFont("times", "bold");
-    doc.text(`Keywords: `, margin.left + 5, currY + absHeight - 5);
+    doc.text("Keywords: ", margins.left + 5, keyY);
     doc.setFont("times", "normal");
-    doc.text(parsedData.keywords.substring(0, 100), margin.left + 25, currY + absHeight - 5);
-    currY += absHeight + 15;
+    doc.text(doc.splitTextToSize(data.keywords, colWidth - 25), margins.left + 20, keyY);
 
-    // --- Main Content (Sections) ---
-    doc.setFontSize(10);
-    let currentColumn = 0;
-    let colY = currY;
+    // Introduction (Right Column)
+    col = 1;
+    y = startY;
+    const rightX = margins.left + colWidth + colGap;
 
-    parsedData.sections.forEach((section) => {
-      // Heading
-      if (colY > 240) {
-        if (metadata.useTwoColumn && currentColumn === 0) {
-          currentColumn = 1;
-          colY = currY;
-        } else {
-          doc.addPage();
-          addHeader();
-          currentColumn = 0;
-          colY = margin.top + 10;
-          currY = colY;
-        }
-      }
-
-      const xPos = currentColumn === 0 ? margin.left : margin.left + colWidth + pdfConfig.columnGap;
-      const activeWidth = metadata.useTwoColumn ? colWidth : pageWidth - margin.left - margin.right;
-
+    const intro = data.sections.find(s => /Introduction/i.test(s.title));
+    if (intro) {
       doc.setFont("times", "bold");
-      doc.setFontSize(12);
-      doc.setTextColor(...colors.headerBlue);
-      doc.text(section.title.toUpperCase(), xPos, colY);
-      colY += 7;
-
+      doc.setFontSize(16);
+      doc.setTextColor(...colors.mainBlue);
+      doc.text("Introduction", rightX, y);
+      y += 10;
+      
+      const introFirst = intro.content.trim().charAt(0);
+      const introRest = intro.content.trim().slice(1);
+      addDropCap(introFirst, rightX, y);
+      
       doc.setFont("times", "normal");
       doc.setFontSize(10);
       doc.setTextColor(0);
-      const textLines = doc.splitTextToSize(section.content, activeWidth);
-      
-      textLines.forEach(line => {
-        if (colY > 260) {
-          if (metadata.useTwoColumn && currentColumn === 0) {
-            currentColumn = 1;
-            colY = currY;
-          } else {
-            doc.addPage();
-            addHeader();
-            currentColumn = 0;
-            colY = margin.top + 10;
-            currY = colY;
-          }
-        }
-        const currentX = currentColumn === 0 ? margin.left : margin.left + colWidth + pdfConfig.columnGap;
-        doc.text(line, currentX, colY);
-        colY += 5;
-      });
-      colY += 10;
+      const introLines = doc.splitTextToSize(introRest, colWidth - 10);
+      doc.text(introLines, rightX + 10, y + 2);
+    }
+
+    // Process remaining sections on new pages
+    data.sections.filter(s => !/Introduction/i.test(s.title)).forEach(sec => {
+      doc.addPage();
+      drawHeader();
+      doc.setFont("times", "bold");
+      doc.setFontSize(14);
+      doc.text(sec.title, margins.left, 40);
+      doc.setFont("times", "normal");
+      doc.setFontSize(10);
+      const lines = doc.splitTextToSize(sec.content, pageWidth - 40);
+      doc.text(lines, margins.left, 48);
     });
 
-    // Add Tables
-    parsedData.tables.forEach((table, i) => {
+    // Process Tables
+    data.tables.forEach((table, i) => {
       doc.addPage();
-      addHeader();
-      doc.setFont("times", "bold");
-      doc.text(table.caption, margin.left, 45);
+      drawHeader();
       doc.autoTable({
-        startY: 50,
+        startY: 40,
         head: table.head,
         body: table.body,
         theme: 'striped',
-        headStyles: { fillColor: colors.headerBlue, textColor: 255 },
-        alternateRowStyles: { fillColor: colors.rowLight },
-        margin: { left: margin.left, right: margin.right }
+        headStyles: { fillColor: colors.mainBlue },
+        styles: { font: 'times', fontSize: 9 }
       });
     });
 
-    // Add Final Footers
+    // Add footers to all pages
     const totalPages = doc.internal.getNumberOfPages();
-    for (let i = 1; i <= totalPages; i++) {
-      doc.setPage(i);
-      addFooter(i, totalPages);
+    for(let i=1; i<=totalPages; i++) {
+        doc.setPage(i);
+        drawFooter(i, totalPages);
     }
 
-    doc.save(`IJSR_Manuscript_${Date.now()}.pdf`);
+    doc.save(`IJSR_Manuscript_${meta.year}.pdf`);
   };
 
+  // --- UI RENDER ---
   return (
-    <div style={styles.container}>
-      <header style={styles.header}>
-        <h1 style={{ margin: 0, fontSize: '28px' }}>IJSR Manuscript Converter</h1>
-        <p style={{ opacity: 0.9, marginTop: '10px' }}>Convert Word (.docx) to IJSR Journal Template PDF</p>
-      </header>
+    <div className="min-h-screen bg-slate-100 p-8 font-sans">
+      <div className="max-w-4xl mx-auto">
+        <header className="bg-gradient-to-r from-[#003366] to-[#00509e] text-white p-10 rounded-t-2xl shadow-xl text-center">
+          <h1 className="text-3xl font-bold tracking-tight">IJSR Manuscript to PDF</h1>
+          <p className="mt-2 text-blue-100 italic">Professional Scholarly Formatting Engine</p>
+        </header>
 
-      <main>
-        {/* Upload Section */}
-        <div style={styles.card}>
-          <div 
-            style={styles.uploadZone} 
-            onClick={() => fileInputRef.current.click()}
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={(e) => {
-              e.preventDefault();
-              const droppedFile = e.dataTransfer.files[0];
-              if (droppedFile) processWordFile(droppedFile);
-            }}
-          >
-            <input 
-              type="file" 
-              ref={fileInputRef} 
-              hidden 
-              accept=".docx" 
-              onChange={handleFileChange} 
-            />
-            <div style={{ fontSize: '40px', marginBottom: '10px' }}>📄</div>
-            <h3 style={{ margin: '0 0 10px 0' }}>{file ? file.name : "Click or Drag Word Document"}</h3>
-            <p style={{ color: '#666', fontSize: '14px' }}>Only .docx files are supported</p>
-            {loading && (
-              <div style={{ marginTop: '20px' }}>
-                <div style={{ width: '100%', height: '6px', background: '#eee', borderRadius: '3px' }}>
-                  <div style={{ width: `${progress}%`, height: '100%', background: '#00509e', borderRadius: '3px', transition: 'width 0.3s' }}></div>
+        <main className="bg-white p-8 shadow-2xl rounded-b-2xl">
+          {/* Upload Area */}
+          {!data ? (
+            <div 
+              onClick={() => fileInputRef.current.click()}
+              className="border-4 border-dashed border-blue-100 rounded-xl p-16 text-center cursor-pointer hover:bg-blue-50 transition-all"
+            >
+              <input type="file" ref={fileInputRef} hidden accept=".docx" onChange={handleFileUpload} />
+              <div className="text-6xl mb-4">📄</div>
+              <h2 className="text-xl font-semibold text-slate-700">Upload Manuscript (.docx)</h2>
+              <p className="text-slate-400 mt-2">The system will automatically parse Title, Authors, and Sections</p>
+              {loading && (
+                <div className="mt-8 w-64 mx-auto bg-slate-200 h-2 rounded-full overflow-hidden">
+                  <div className="bg-blue-600 h-full transition-all duration-500" style={{ width: `${progress}%` }}></div>
                 </div>
-                <p style={{ fontSize: '12px', color: '#00509e', marginTop: '5px' }}>Processing... {progress}%</p>
-              </div>
-            )}
-          </div>
-          {error && <p style={{ color: 'red', marginTop: '10px', fontSize: '14px' }}>{error}</p>}
-        </div>
-
-        {parsedData && (
-          <>
-            {/* Configuration Options */}
-            <div style={styles.card}>
-              <h3 style={{ marginTop: 0, borderBottom: '1px solid #eee', paddingBottom: '10px' }}>Journal Metadata</h3>
-              <div style={styles.grid}>
-                <div style={styles.inputGroup}>
-                  <label style={styles.label}>ISSN</label>
-                  <input 
-                    style={styles.input} 
-                    value={metadata.issn} 
-                    onChange={e => setMetadata({...metadata, issn: e.target.value})} 
-                  />
+              )}
+            </div>
+          ) : (
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-4 bg-slate-50 p-6 rounded-xl border border-slate-200">
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase">Received Date</label>
+                  <input className="w-full p-2 mt-1 border rounded" value={meta.received} onChange={e => setMeta({...meta, received: e.target.value})} />
                 </div>
-                <div style={styles.inputGroup}>
-                  <label style={styles.label}>Received Date</label>
-                  <input 
-                    style={styles.input} 
-                    value={metadata.receivedDate} 
-                    onChange={e => setMetadata({...metadata, receivedDate: e.target.value})} 
-                  />
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase">Accepted Date</label>
+                  <input className="w-full p-2 mt-1 border rounded" value={meta.accepted} onChange={e => setMeta({...meta, accepted: e.target.value})} />
                 </div>
-                <div style={styles.inputGroup}>
-                  <label style={styles.label}>Volume / Issue</label>
-                  <div style={{ display: 'flex', gap: '10px' }}>
-                    <input style={styles.input} placeholder="Vol" value={metadata.volume} onChange={e => setMetadata({...metadata, volume: e.target.value})} />
-                    <input style={styles.input} placeholder="Issue" value={metadata.issue} onChange={e => setMetadata({...metadata, issue: e.target.value})} />
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase">ISSN</label>
+                  <input className="w-full p-2 mt-1 border rounded" value={meta.issn} onChange={e => setMeta({...meta, issn: e.target.value})} />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase">Volume / Issue</label>
+                  <div className="flex gap-2">
+                    <input className="w-1/2 p-2 mt-1 border rounded" placeholder="Vol" value={meta.volume} onChange={e => setMeta({...meta, volume: e.target.value})} />
+                    <input className="w-1/2 p-2 mt-1 border rounded" placeholder="Issue" value={meta.issue} onChange={e => setMeta({...meta, issue: e.target.value})} />
                   </div>
                 </div>
-                <div style={styles.inputGroup}>
-                  <label style={styles.label}>Layout Mode</label>
-                  <select 
-                    style={styles.input} 
-                    value={metadata.useTwoColumn} 
-                    onChange={e => setMetadata({...metadata, useTwoColumn: e.target.value === 'true'})}
-                  >
-                    <option value="true">Double Column (Academic)</option>
-                    <option value="false">Single Column (Standard)</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            {/* Preview Section */}
-            <div style={styles.card}>
-              <h3 style={{ marginTop: 0 }}>Manuscript Preview</h3>
-              <div style={{ padding: '15px', backgroundColor: '#f9f9f9', borderRadius: '6px', fontSize: '14px' }}>
-                <p><strong>Title:</strong> {parsedData.title}</p>
-                <p><strong>Authors:</strong> {parsedData.authors}</p>
-                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                  <span style={styles.badge}>{parsedData.sections.length} Sections Found</span>
-                  <span style={styles.badge}>{parsedData.tables.length} Tables Found</span>
-                  <span style={styles.badge}>{parsedData.abstract.length > 0 ? "Abstract Detected" : "No Abstract"}</span>
-                </div>
               </div>
 
-              <div style={{ marginTop: '30px', display: 'flex', gap: '15px' }}>
+              <div className="border border-blue-100 p-6 rounded-xl">
+                <h3 className="text-blue-900 font-bold mb-2">Structure Detected:</h3>
+                <ul className="text-sm text-slate-600 space-y-1">
+                  <li>✅ <strong>Title:</strong> {data.title.substring(0, 80)}...</li>
+                  <li>✅ <strong>Authors:</strong> {data.authors}</li>
+                  <li>✅ <strong>Abstract:</strong> {data.abstract.split(' ').length} words</li>
+                  <li>✅ <strong>Sections:</strong> {data.sections.length} found</li>
+                  <li>✅ <strong>Tables:</strong> {data.tables.length} found</li>
+                </ul>
+              </div>
+
+              <div className="flex gap-4">
                 <button 
                   onClick={generatePDF}
-                  style={{ ...styles.button, ...styles.primaryBtn, flex: 1, justifyContent: 'center' }}
+                  className="flex-1 bg-[#003366] text-white py-4 rounded-xl font-bold hover:bg-blue-800 transition-colors shadow-lg shadow-blue-900/20"
                 >
-                  Download IJSR PDF
+                  Download IJSR Formatted PDF
                 </button>
                 <button 
-                  onClick={() => { setFile(null); setParsedData(null); }}
-                  style={{ ...styles.button, ...styles.secondaryBtn }}
+                  onClick={() => setData(null)}
+                  className="px-6 py-4 bg-slate-100 text-slate-500 rounded-xl hover:bg-slate-200 transition-colors"
                 >
-                  Clear
+                  Reset
                 </button>
               </div>
             </div>
-          </>
-        )}
-      </main>
-
-      <footer style={{ textAlign: 'center', color: '#888', fontSize: '12px', marginTop: '40px' }}>
-        &copy; {new Date().getFullYear()} International Journal of Scholarly Resources (IJSR). Internal Tool.
-      </footer>
+          )}
+        </main>
+        
+        <footer className="mt-8 text-center text-slate-400 text-xs">
+          Internal Publishing Tool | © {new Date().getFullYear()} International Journal of Scholarly Resources
+        </footer>
+      </div>
     </div>
   );
 }
