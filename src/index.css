@@ -1,0 +1,105 @@
+/* =========================================
+   1. TAILWIND DIRECTIVES
+   (This activates the styling engine)
+   ========================================= */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* =========================================
+   2. FONT IMPORT (Google Fonts - Inter)
+   ========================================= */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+/* =========================================
+   3. GLOBAL BASE STYLES
+   ========================================= */
+body {
+  margin: 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #f8fafc; /* Matches the Slate-50 background */
+  color: #1e293b; /* Matches Slate-800 text */
+  overflow-x: hidden; /* Prevent horizontal scrolling */
+}
+
+/* =========================================
+   4. CUSTOM SCROLLBARS
+   (Makes the dashboard look like a native app)
+   ========================================= */
+/* Width */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+/* Track */
+::-webkit-scrollbar-track {
+  background: transparent; 
+}
+
+/* Handle */
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1; /* Slate-300 */
+  border-radius: 10px;
+  transition: background 0.3s ease;
+}
+
+/* Handle on hover */
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8; /* Slate-400 */
+}
+
+/* =========================================
+   5. UTILITY TWEAKS
+   ========================================= */
+
+/* Remove arrows from number inputs for a cleaner look */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Animation Keyframes (Used in the React App) */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Soft Focus Ring for Accessibility & Design */
+:focus-visible {
+  outline: 2px solid #6366f1; /* Indigo-500 */
+  outline-offset: 2px;
+}
+
+
+
+.input {
+  @apply w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition;
+}
+.input-sm {
+  @apply w-full p-1 border border-gray-300 rounded text-center text-sm;
+}
+.btn-primary {
+  @apply bg-blue-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-blue-700 transition shadow;
+}
+.btn-nav {
+  @apply px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 font-medium text-gray-700;
+}
+.card {
+  @apply bg-white p-6 rounded-xl shadow-sm border border-gray-100;
+}
